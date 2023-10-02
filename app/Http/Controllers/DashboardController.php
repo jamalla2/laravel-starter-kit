@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Services\SallaAuthService;
 use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 
+use SallaSDK;
+use GuzzleHttp\Client;
+
 class DashboardController extends Controller
 {
     /**
@@ -52,23 +55,20 @@ class DashboardController extends Controller
             // let's get the store details to show it
             $store = $this->salla->getStoreDetail();
 
-            // let's get the product of store via salla service
-            $products = $this->salla->request('GET', 'https://api.salla.dev/admin/v2/products')['data'];
 
-            /**
-             * Or you can use Http client of laravel to get the products
-             */
-            //$response = Http::asJson()->withToken($this->salla->getToken()->access_token)
-            //    ->get('https://api.salla.dev/admin/v2/products');
+            // Fetching products list using Salla SDK
+            $config = SallaSDK\Configuration::getDefaultConfiguration()->setAccessToken($this->salla->getNewAccessToken());
+            $apiInstance = new SallaSDK\Api\ProductsApi(new Client(), $config);
 
-            //if ($response->status() === 200) {
-            //    $products = $response->json()['data'];
-            //}
+            try {
+                $products = $apiInstance->getProducts()->getData();
+            } catch (Exception $e) {
+                echo 'Exception when calling ProductsApi->getProducts: ', $e->getMessage(), PHP_EOL;
+            }
         }
 
         return view('dashboard', [
-            // get the first 8 products from the response
-            'products' => array_slice($products, 0, min(8, count($products))),
+            'products' => array_slice($products, 0, min(5, count($products))),
             'store'    => $store
         ]);
     }
